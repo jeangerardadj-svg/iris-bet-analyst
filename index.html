@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRIS BET ANALYST</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#08111f;color:#fff;font-family:Arial,sans-serif}
+header{background:#101e32;padding:22px 15px;text-align:center;border-bottom:2px solid #16c784}
+header h1{color:#16c784;margin:0;font-size:25px}
+header p{color:#aab8ca;font-size:12px}
+main{padding:15px;max-width:750px;margin:auto}
+.card{background:#14243a;padding:16px;border-radius:12px;margin:14px 0}
+h2{font-size:17px;color:#16c784}
+input,select{width:100%;padding:12px;margin:6px 0;background:#091729;color:white;border:1px solid #30445c;border-radius:7px}
+button{padding:12px;background:#16c784;color:#061326;border:0;border-radius:7px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.4}
+.match{border-bottom:1px solid #34445a;padding:12px 0}
+.match strong{display:block;margin-bottom:8px}
+.tag{color:#16c784;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions button{flex:1}
+.result{color:#16c784;font-weight:bold;margin-top:10px}
+footer{text-align:center;padding:25px;color:#8493a8;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>⚡ IRIS BET ANALYST</h1>
+<p>PLATEFORME INTELLIGENTE D'ANALYSE FOOTBALL</p>
+</header>
+<main>
+<div class="card">
+<h2>📊 Tableau de bord</h2>
+<p>Analyses football et préparation de tickets.</p>
+<p>Marchés : <b>1X2 · Plus/Moins · BTTS</b></p>
+<p>Maximum : <b>10 matchs par ticket</b></p>
+</div>
+
+<div class="card">
+<h2>⚽ Ajouter un match</h2>
+<input id="home" placeholder="Équipe à domicile">
+<input id="away" placeholder="Équipe extérieure">
+<input id="odds1" type="number" step="0.01" placeholder="Cote victoire domicile">
+<input id="oddsx" type="number" step="0.01" placeholder="Cote match nul">
+<input id="odds2" type="number" step="0.01" placeholder="Cote victoire extérieur">
+<button onclick="addMatch()">Ajouter le match</button>
+</div>
+
+<div class="card">
+<h2>🔍 Matchs disponibles</h2>
+<div id="matches">Aucun match ajouté pour le moment.</div>
+</div>
+
+<div class="card">
+<h2>🎯 Mon ticket</h2>
+<p id="count">0 / 10 matchs sélectionnés</p>
+<div id="ticket">Sélectionne des matchs.</div>
+<button onclick="makeTicket()">Générer mon ticket</button>
+<div id="ticketResult"></div>
+</div>
+</main>
+<footer>IRIS BET ANALYST · Version 1.0</footer>
+
+<script>
+let matches=[];
+let selected=[];
+
+function addMatch(){
+let home=document.getElementById('home').value.trim();
+let away=document.getElementById('away').value.trim();
+let a=Number(document.getElementById('odds1').value);
+let x=Number(document.getElementById('oddsx').value);
+let b=Number(document.getElementById('odds2').value);
+
+if(!home||!away||a<=1||x<=1||b<=1){
+alert("Remplis correctement les deux équipes et les trois cotes.");
+return;
+}
+matches.push({home,away,a,x,b});
+document.getElementById('home').value='';
+document.getElementById('away').value='';
+document.getElementById('odds1').value='';
+document.getElementById('oddsx').value='';
+document.getElementById('odds2').value='';
+render();
+}
+
+function analyze(m){
+let probs=[1/m.a,1/m.x,1/m.b];
+let total=probs.reduce((s,v)=>s+v,0);
+probs=probs.map(v=>v/total*100);
+let max=Math.max(...probs);
+let index=probs.indexOf(max);
+let choices=["Victoire domicile","Match nul","Victoire extérieur"];
+return {choice:choices[index],confidence:max.toFixed(1)};
+}
+
+function render(){
+let html='';
+matches.forEach((m,i)=>{
+let r=analyze(m);
+html+=`<div class="match">
+<strong>${m.home} - ${m.away}</strong>
+<span class="tag">Analyse indicative : ${r.choice} (${r.confidence}%)</span>
+<p>Cotes : 1: ${m.a} | N: ${m.x} | 2: ${m.b}</p>
+<button onclick="toggle(${i})">${selected.includes(i)?'Retirer du ticket':'Ajouter au ticket'}</button>
+</div>`;
+});
+document.getElementById('matches').innerHTML=html||'Aucun match ajouté.';
+document.getElementById('count').innerText=selected.length+' / 10 matchs sélectionnés';
+document.getElementById('ticket').innerText=selected.map(i=>matches[i].home+' - '+matches[i].away).join(' | ')||'Sélectionne des matchs.';
+}
+
+function toggle(i){
+if(selected.includes(i)){
+selected=selected.filter(v=>v!==i);
+}else if(selected.length<10){
+selected.push(i);
+}else{
+alert('Maximum 10 matchs par ticket.');
+}
+render();
+}
+
+function makeTicket(){
+if(selected.length===0){
+alert('Sélectionne au moins un match.');
+return;
+}
+let total=1;
+let lines=selected.map(i=>{
+let m=matches[i],r=analyze(m);
+let odds=[m.a,m.x,m.b];
+let choices=['1','N','2'];
+let index=[1/m.a,1/m.x,1/m.b].indexOf(Math.max(1/m.a,1/m.x,1/m.b));
+total*=odds[index];
+return m.home+' - '+m.away+' : '+choices[index]+' ('+r.confidence+'%)';
+});
+document.getElementById('ticketResult').innerHTML=
+'<h3>Ticket proposé</h3><p>'+lines.join('<br>')+
+'</p><p class="result">Cote combinée indicative : '+total.toFixed(2)+'</p>';
+}
+</script>
+</body>
+</html>
